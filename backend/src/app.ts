@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import healthRoutes from './routes/health';
 import authRoutes from './routes/auth';
+import participantRoutes from './routes/participant';
 import testAuthRoutes from './routes/testAuth';
 
 const app = express();
@@ -23,6 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/participant', participantRoutes);
 app.use('/api/test', testAuthRoutes);
 
 // 404 handler
