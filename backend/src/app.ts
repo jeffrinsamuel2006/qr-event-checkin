@@ -20,8 +20,30 @@ const app = express();
 app.use(helmet());
 
 // CORS configuration
+const allowedOrigins: string[] = [];
+
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
+// Always allow localhost for development
+allowedOrigins.push('http://localhost:5173');
+
 app.use(cors({
-  origin: process.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    // In development, allow all origins
+    if (process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 

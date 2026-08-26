@@ -3,7 +3,8 @@ import { env } from './config/env';
 
 const PORT = parseInt(env.PORT, 10) || 3001;
 
-const server = app.listen(PORT, () => {
+// Bind to 0.0.0.0 for Render deployment
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`   Health check: http://localhost:${PORT}/api/health`);
   console.log(`   DB check:     http://localhost:${PORT}/api/health/db`);

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
+import { supabase } from '../config';
 import QRScanner from '../components/QRScanner';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
@@ -72,6 +73,7 @@ export default function OrganizerHome() {
   const isProcessingScanRef = useRef(false);
 
   const fetchedRef = useRef(false);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
 
   const fetchDashboard = useCallback(async () => {
     if (!token) return;
@@ -117,6 +119,40 @@ export default function OrganizerHome() {
       fetchedRef.current = true;
       fetchDashboard();
     }
+  }, [fetchDashboard]);
+
+  // Supabase Realtime subscription for live dashboard updates
+  useEffect(() => {
+    const sb = supabase;
+    if (!sb) return;
+
+    let channel: ReturnType<typeof sb.channel> | null = null;
+
+    channel = sb
+      .channel('checkins-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'checkins',
+        },
+        () => {
+          // Realtime event received — re-fetch from database
+          fetchDashboard();
+        }
+      )
+      .subscribe((status) => {
+        setRealtimeConnected(status === 'SUBSCRIBED');
+      });
+
+    return () => {
+      if (channel) {
+        sb.removeChannel(channel);
+        channel = null;
+      }
+      setRealtimeConnected(false);
+    };
   }, [fetchDashboard]);
 
   const handleRefresh = async () => {
@@ -304,12 +340,24 @@ export default function OrganizerHome() {
                 Status: <span className={`font-medium ${event.status === 'ACTIVE' ? 'text-green-600' : 'text-yellow-600'}`}>{event.status}</span>
               </p>
             </div>
-            <button
-              onClick={handleRefresh}
-              className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
-            >
-              Refresh
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Realtime indicator */}
+              <span
+                className={`text-xs px-2 py-1 rounded-full font-medium ${
+                  realtimeConnected
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                {realtimeConnected ? '● Live' : '○ Offline'}
+              </span>
+              <button
+                onClick={handleRefresh}
+                className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
+              >
+                Refresh
+              </button>
+            </div>
           </div>
         </div>
 

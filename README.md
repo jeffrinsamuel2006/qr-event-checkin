@@ -1,6 +1,23 @@
-# QR Event Check-In & Attendance Analytics System
+# QR-Based Smart Event Check-In & Attendance Analytics System
 
-A hackathon project for QR-based smart event check-in with real-time attendance analytics. Organizers can manage events and scan attendee QR codes, while participants receive check-in confirmations.
+A full-stack TypeScript application for QR-based event check-in with real-time attendance analytics. Organizers manage events and scan attendee QR codes; participants receive instant check-in confirmations.
+
+## Architecture
+
+```
+Participant
+    ↓
+Vercel frontend (React + Vite + TypeScript + Tailwind)
+    ↓
+Render backend (Node.js + Express + TypeScript)
+    ↓
+Supabase PostgreSQL
+
+Organizer Scanner:
+Camera → QR decode → POST /api/checkin → Render backend → Supabase
+    ↓
+checkins INSERT → Supabase Realtime → Organizer Dashboard (auto-refresh)
+```
 
 ## Technology Stack
 
@@ -9,199 +26,150 @@ A hackathon project for QR-based smart event check-in with real-time attendance 
 | Frontend | React, Vite, TypeScript, Tailwind CSS |
 | Backend | Node.js, Express, TypeScript |
 | Database | Supabase PostgreSQL |
-| Deployment | Vercel (frontend), Render (backend) |
-
-## Folder Structure
-
-```
-qr-event-checkin/
-├── frontend/              # Vite React TypeScript app
-│   ├── src/
-│   │   ├── App.tsx
-│   │   ├── main.tsx
-│   │   ├── auth/           # Authentication context & API
-│   │   │   ├── AuthContext.tsx
-│   │   │   ├── authApi.ts
-│   │   │   ├── types.ts
-│   │   │   └── index.ts
-│   │   ├── components/
-│   │   │   └── ProtectedRoute.tsx
-│   │   └── pages/
-│   │       ├── Login.tsx
-│   │       ├── OrganizerHome.tsx
-│   │       └── ParticipantHome.tsx
-│   ├── package.json
-│   ├── vite.config.ts
-│   └── tsconfig.json
-├── backend/               # Express TypeScript API
-│   ├── src/
-│   │   ├── server.ts
-│   │   ├── app.ts
-│   │   ├── config/
-│   │   │   ├── env.ts
-│   │   │   └── supabase.ts
-│   │   ├── routes/
-│   │   │   ├── auth.ts
-│   │   │   ├── health.ts
-│   │   │   └── testAuth.ts
-│   │   ├── controllers/
-│   │   │   └── authController.ts
-│   │   ├── services/
-│   │   │   └── authService.ts
-│   │   ├── middleware/
-│   │   │   ├── auth.ts
-│   │   │   └── authorize.ts
-│   │   ├── types/
-│   │   │   └── index.ts
-│   │   └── utils/
-│   │       ├── jwt.ts
-│   │       └── password.ts
-│   ├── package.json
-│   └── tsconfig.json
-├── database/
-│   ├── schema.sql         # Table definitions and indexes
-│   └── seed.sql           # Demo data with bcrypt hashes
-├── README.md
-├── .gitignore
-└── .env.example
-```
-
-## Local Setup Instructions
-
-### Prerequisites
-
-- Node.js (v18 or later)
-- npm
-- A [Supabase](https://supabase.com) account (free tier works)
-
-### 1. Clone the Repository
-
-```bash
-git clone <repository-url>
-cd qr-event-checkin
-```
-
-### 2. Frontend Setup
-
-```bash
-cd frontend
-cp ../frontend/.env.example .env
-npm install
-npm run dev
-```
-
-The frontend will be available at `http://localhost:5173`.
-
-### 3. Backend Setup
-
-```bash
-cd backend
-cp .env.example .env
-# Fill in your Supabase credentials in .env (see Environment Variables below)
-npm install
-npm run dev
-```
-
-The backend will be available at `http://localhost:3001`.
+| Auth | JWT, bcrypt |
+| QR Generation | qrcode.react |
+| QR Scanning | html5-qrcode |
+| Realtime | Supabase Realtime |
+| Frontend Deploy | Vercel |
+| Backend Deploy | Render |
 
 ## Environment Variables
 
 ### Backend (`backend/.env`)
 
-| Variable | Description |
-|----------|-------------|
-| `PORT` | Server port (default: 3001) |
-| `SUPABASE_URL` | Your Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (keep secret!) |
-| `JWT_SECRET` | Secret for JWT token signing |
-| `JWT_EXPIRES_IN` | JWT token expiration (default: `2h`) |
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `PORT` | Server port (default: `3001`) | No |
+| `SUPABASE_URL` | Supabase project URL | Yes |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | Yes |
+| `JWT_SECRET` | Secret for JWT signing | Yes |
+| `JWT_EXPIRES_IN` | Token expiry (default: `2h`) | No |
+| `FRONTEND_URL` | Deployed Vercel URL for CORS | No |
+| `NODE_ENV` | `development` or `production` | No |
 
 ### Frontend (`frontend/.env`)
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_API_BASE_URL` | Backend API URL (default: `http://localhost:3001/api`) |
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `VITE_API_BASE_URL` | Backend API URL | Yes |
+| `VITE_SUPABASE_URL` | Supabase project URL (for Realtime) | Yes |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon/public key (for Realtime) | Yes |
 
-**⚠️ Security:** The `SUPABASE_SERVICE_ROLE_KEY` must NEVER be exposed to the frontend. It should only exist in the backend environment.
+> ⚠️ **Security:** The frontend NEVER uses `SUPABASE_SERVICE_ROLE_KEY`. Only the anon/public key is used for Realtime subscriptions. The service role key must only exist in the backend environment.
 
-## Supabase Setup
+## Local Development Setup
 
-1. Create a free account at [supabase.com](https://supabase.com)
-2. Create a new project
-3. Go to **SQL Editor** in the Supabase dashboard
-4. Run the contents of `database/schema.sql` to create tables
-5. Run the contents of `database/seed.sql` to insert demo data
-6. Copy your **Project URL** and **Service Role Key** from **Settings → API**
-7. Paste them into your `backend/.env` file
+### Prerequisites
 
-## Running the Application
+- Node.js v18+
+- npm
+- A [Supabase](https://supabase.com) project (free tier works)
 
-### Frontend
+### 1. Clone & Install
 
 ```bash
+git clone <repo-url>
+cd qr-event-checkin
+
+# Backend
+cd backend
+cp .env.example .env
+# Fill in Supabase credentials in .env
+npm install
+
+# Frontend
+cd ../frontend
+cp .env.example .env
+# Fill in VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+npm install
+```
+
+### 2. Database Setup
+
+1. Go to **SQL Editor** in your Supabase dashboard
+2. Run `database/schema.sql` to create tables
+3. Run `database/seed.sql` to insert demo data
+
+### 3. Start Development Servers
+
+```bash
+# Terminal 1 — Backend (port 3001)
+cd backend
+npm run dev
+
+# Terminal 2 — Frontend (port 5173)
 cd frontend
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:5173`.
+## Deployment
 
-### Backend
+### Backend (Render)
 
-```bash
-cd backend
-npm run dev
-```
+1. Push code to GitHub
+2. Create a new **Web Service** on [Render](https://render.com)
+3. Connect your GitHub repo
+4. Configure:
+   - **Build Command:** `cd backend && npm install && npm run build`
+   - **Start Command:** `cd backend && npm start`
+5. Add environment variables:
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `JWT_SECRET`
+   - `JWT_EXPIRES_IN=2h`
+   - `FRONTEND_URL=https://<your-vercel-domain>.vercel.app`
+   - `NODE_ENV=production`
+6. Deploy
 
-The backend will be available at `http://localhost:3001`.
+### Frontend (Vercel)
 
-### TypeScript Check
+1. Push code to GitHub
+2. Create a new project on [Vercel](https://vercel.com)
+3. Import your GitHub repo
+4. Configure:
+   - **Framework Preset:** Vite
+   - **Root Directory:** `frontend`
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `dist`
+5. Add environment variables:
+   - `VITE_API_BASE_URL=https://<your-render-domain>.onrender.com/api`
+   - `VITE_SUPABASE_URL=<your-supabase-url>`
+   - `VITE_SUPABASE_ANON_KEY=<your-supabase-anon-key>`
+6. Deploy
 
-```bash
-# Frontend
-cd frontend && npm run build
+### Post-Deployment
 
-# Backend
-cd backend && npm run typecheck
-```
-
-### Run Backend Tests
-
-```bash
-cd backend && node test-all.js
-```
+Update `FRONTEND_URL` in Render with your actual Vercel deployment URL to enable CORS.
 
 ## API Endpoints
 
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
 | GET | `/api/health` | Health check | No |
-| GET | `/api/health/db` | Database connectivity check | No |
+| GET | `/api/health/db` | Database connectivity | No |
 | POST | `/api/auth/login` | User login (returns JWT) | No |
-| GET | `/api/test/organizer` | Test organizer-only access | Yes (ORGANIZER) |
-| GET | `/api/test/participant` | Test participant-only access | Yes (PARTICIPANT) |
+| GET | `/api/participant/me` | Participant profile + registration | PARTICIPANT |
+| GET | `/api/organizer/dashboard` | Dashboard with attendance data | ORGANIZER |
+| POST | `/api/checkin` | Check in an attendee by QR code | ORGANIZER |
 
 ## Authentication
 
-This system uses JWT-based authentication with bcrypt password hashing.
-
-### Authentication Flow
+JWT-based authentication with bcrypt password hashing.
 
 1. Client sends `POST /api/auth/login` with email and password
-2. Server verifies credentials against bcrypt hashes in the database
+2. Server verifies credentials against bcrypt hashes
 3. Server returns a JWT containing user ID and role
 4. Client stores the JWT in localStorage
-5. Client includes `Authorization: Bearer <token>` header on protected requests
-6. Server middleware verifies the JWT and enforces role-based access
+5. Client sends `Authorization: Bearer <token>` on protected routes
+6. Server middleware verifies JWT and enforces role-based access
 
-### Role-Based Access Control
+**Role-Based Access Control:**
+- `ORGANIZER` — Dashboard, scanner, check-in
+- `PARTICIPANT` — Participant portal with QR code
 
-- **ORGANIZER** — Can access organizer-only routes
-- **PARTICIPANT** — Can access participant-only routes
-- Frontend route protection is for UX only; backend authorization is the real security boundary
+## Demo Credentials
 
-## Demo Development Credentials
-
-**⚠️ DEMO DEVELOPMENT CREDENTIALS — NOT FOR PRODUCTION**
+> ⚠️ **HACKATHON DEMO CREDENTIALS — NOT FOR PRODUCTION USE**
 
 | Role | Email | Password |
 |------|-------|----------|
@@ -212,8 +180,100 @@ This system uses JWT-based authentication with bcrypt password hashing.
 | PARTICIPANT | `diana@demo.com` | `Participant@123` |
 | PARTICIPANT | `eve@demo.com` | `Participant@123` |
 
-All passwords are stored as bcrypt hashes in the database. Never store plaintext passwords.
+All passwords are bcrypt-hashed in the database. Never store plaintext passwords.
+
+## Running Tests
+
+```bash
+cd backend
+
+# Build first
+npm run build
+
+# Phase 2 — Auth (11/11 expected)
+node test-all.js
+
+# Phase 3 — Participant (11/11 expected)
+node test-phase3.js
+
+# Phase 4 — Check-in Security (16/16 expected)
+node test-phase4.js
+
+# Phase 5 — Dashboard (16/16 expected)
+node test-phase5.js
+```
+
+## Build Commands
+
+```bash
+# Backend — TypeScript check
+cd backend && npx tsc --noEmit
+
+# Backend — Production build
+cd backend && npm run build
+
+# Frontend — TypeScript check + build
+cd frontend && npm run build
+```
+
+## Realtime Updates
+
+The organizer dashboard subscribes to Supabase Realtime `INSERT` events on the `checkins` table. When a new check-in occurs:
+
+1. Supabase fires a `postgres_changes` event
+2. The frontend receives the event
+3. The frontend re-fetches `GET /api/organizer/dashboard`
+4. Dashboard displays fresh database-derived data
+
+> Realtime is an enhancement. The manual **Refresh** button always works independently.
+
+## Security Notes
+
+- `SUPABASE_SERVICE_ROLE_KEY` is **never** exposed to the frontend
+- Only the Supabase **anon** key is used client-side (for Realtime)
+- Password hashes are **never** sent in API responses
+- JWT secrets are **only** in backend environment
+- CORS is restricted to known frontend origins in production
+- All check-in creation goes through the authenticated backend
+- Frontend cannot directly insert into `checkins`
+- Database unique constraints prevent duplicate check-ins
+- Server timestamps are used, not client timestamps
+
+## Project Structure
+
+```
+qr-event-checkin/
+├── frontend/                    # Vite React TypeScript app
+│   ├── src/
+│   │   ├── App.tsx              # Router setup
+│   │   ├── main.tsx             # Entry point
+│   │   ├── auth/                # Auth context & API
+│   │   ├── components/          # QRScanner, ProtectedRoute
+│   │   ├── config/              # Supabase client (Realtime)
+│   │   └── pages/               # Login, OrganizerHome, ParticipantHome
+│   ├── .env.example
+│   └── package.json
+├── backend/                     # Express TypeScript API
+│   ├── src/
+│   │   ├── server.ts            # Entry point
+│   │   ├── app.ts               # Express app with CORS, routes
+│   │   ├── config/              # env, supabase client
+│   │   ├── controllers/         # Request handlers
+│   │   ├── middleware/          # auth, authorize
+│   │   ├── routes/              # Route definitions
+│   │   ├── services/            # Business logic
+│   │   ├── types/               # TypeScript types
+│   │   └── utils/               # JWT, password hashing
+│   ├── .env.example
+│   └── package.json
+├── database/
+│   ├── schema.sql               # Table definitions
+│   └── seed.sql                 # Demo data
+├── .env.example                 # Combined env template
+├── .gitignore
+└── README.md
+```
 
 ## License
 
-This project was built for hackathon purposes.
+Built for hackathon purposes.
