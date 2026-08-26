@@ -5,6 +5,7 @@ import healthRoutes from './routes/health';
 import authRoutes from './routes/auth';
 import participantRoutes from './routes/participant';
 import checkinRoutes from './routes/checkin';
+import organizerRoutes from './routes/organizer';
 import testAuthRoutes from './routes/testAuth';
 
 // Extend Error to include statusCode
@@ -33,6 +34,7 @@ app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/participant', participantRoutes);
 app.use('/api/checkin', checkinRoutes);
+app.use('/api/organizer', organizerRoutes);
 app.use('/api/test', testAuthRoutes);
 
 // 404 handler
