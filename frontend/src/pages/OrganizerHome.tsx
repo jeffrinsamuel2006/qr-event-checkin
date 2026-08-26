@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
+import QRScanner from '../components/QRScanner';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
@@ -48,6 +49,9 @@ interface CheckinResponse {
 
 type CheckinStatus = 'idle' | 'loading' | 'success' | 'duplicate' | 'unknown' | 'error';
 
+// Scanner-specific states
+type ScannerState = 'closed' | 'scanning' | 'processing' | 'result';
+
 export default function OrganizerHome() {
   const { token, logout } = useAuth();
   const navigate = useNavigate();
@@ -60,6 +64,12 @@ export default function OrganizerHome() {
   const [status, setStatus] = useState<CheckinStatus>('idle');
   const [message, setMessage] = useState('');
   const [checkinData, setCheckinData] = useState<CheckinResponse['checkin'] | null>(null);
+
+  // Scanner state
+  const [scannerState, setScannerState] = useState<ScannerState>('closed');
+  const [scannerError, setScannerError] = useState<string | null>(null);
+  const [scanResult, setScanResult] = useState<CheckinResponse | null>(null);
+  const isProcessingScanRef = useRef(false);
 
   const fetchedRef = useRef(false);
 
@@ -113,6 +123,21 @@ export default function OrganizerHome() {
     await fetchDashboard();
   };
 
+  // Submit check-in (used by both manual and scanner)
+  const submitCheckin = async (code: string): Promise<CheckinResponse> => {
+    const response = await fetch(`${API_BASE_URL}/checkin`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ attendeeCode: code }),
+    });
+
+    return await response.json();
+  };
+
+  // Manual check-in handler
   const handleCheckin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -127,29 +152,19 @@ export default function OrganizerHome() {
     setMessage('');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/checkin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ attendeeCode: code }),
-      });
+      const data = await submitCheckin(code);
 
-      const data: CheckinResponse = await response.json();
-
-      if (response.status === 200 && data.success) {
+      if (data.success) {
         setStatus('success');
         setMessage(data.message);
         setCheckinData(data.checkin || null);
         setAttendeeCode('');
-        // Refresh dashboard to get updated counts from database
         await fetchDashboard();
-      } else if (response.status === 409) {
+      } else if (data.result === 'DUPLICATE') {
         setStatus('duplicate');
         setMessage(data.message || 'Already checked in');
         setCheckinData(null);
-      } else if (response.status === 404) {
+      } else if (data.result === 'UNKNOWN_ATTENDEE') {
         setStatus('unknown');
         setMessage(data.message || 'Unknown attendee code');
         setCheckinData(null);
@@ -165,6 +180,60 @@ export default function OrganizerHome() {
     }
   };
 
+  // Scanner scan handler
+  const handleScannerScan = useCallback(async (decodedText: string) => {
+    // Prevent repeated scans
+    if (isProcessingScanRef.current) return;
+    isProcessingScanRef.current = true;
+
+    setScannerState('processing');
+    setScannerError(null);
+    setScanResult(null);
+
+    try {
+      const data = await submitCheckin(decodedText);
+      setScanResult(data);
+      setScannerState('result');
+    } catch {
+      setScanResult({
+        success: false,
+        message: 'Check-in service temporarily unavailable',
+        result: 'SERVER_ERROR',
+      });
+      setScannerState('result');
+    }
+  }, [token]);
+
+  // Scanner error handler
+  const handleScannerError = useCallback((errorMessage: string) => {
+    setScannerError(errorMessage);
+    setScannerState('closed');
+  }, []);
+
+  // Scan next handler
+  const handleScanNext = () => {
+    isProcessingScanRef.current = false;
+    setScanResult(null);
+    setScannerError(null);
+    setScannerState('scanning');
+  };
+
+  // Open scanner
+  const handleOpenScanner = () => {
+    isProcessingScanRef.current = false;
+    setScanResult(null);
+    setScannerError(null);
+    setScannerState('scanning');
+  };
+
+  // Close scanner
+  const handleCloseScanner = () => {
+    isProcessingScanRef.current = false;
+    setScanResult(null);
+    setScannerError(null);
+    setScannerState('closed');
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -177,6 +246,15 @@ export default function OrganizerHome() {
       case 'unknown': return 'text-red-700 bg-red-50 border-red-200';
       case 'error': return 'text-red-700 bg-red-50 border-red-200';
       default: return '';
+    }
+  };
+
+  const getScanResultColor = (result: string) => {
+    switch (result) {
+      case 'SUCCESS': return 'text-green-700 bg-green-50 border-green-200';
+      case 'DUPLICATE': return 'text-yellow-700 bg-yellow-50 border-yellow-200';
+      case 'UNKNOWN_ATTENDEE': return 'text-red-700 bg-red-50 border-red-200';
+      default: return 'text-red-700 bg-red-50 border-red-200';
     }
   };
 
@@ -269,10 +347,109 @@ export default function OrganizerHome() {
           <p className="text-sm text-gray-500 mt-2">{attendance.percentage}%</p>
         </div>
 
-        {/* Check-In Form */}
+        {/* Check-In Section */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-lg font-semibold text-gray-700 mb-4">Check-In Attendee</h2>
 
+          {/* Scanner Button */}
+          {scannerState === 'closed' && (
+            <button
+              onClick={handleOpenScanner}
+              className="w-full bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 mb-4"
+            >
+              📷 Scan QR Code
+            </button>
+          )}
+
+          {/* Scanner Modal */}
+          {scannerState !== 'closed' && (
+            <div className="mb-4 border rounded-lg p-4 bg-gray-50">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-medium text-gray-700">Scan Attendee QR</h3>
+                <button
+                  onClick={handleCloseScanner}
+                  className="text-gray-500 hover:text-gray-700 text-sm"
+                >
+                  Close Scanner
+                </button>
+              </div>
+
+              {/* Camera Preview */}
+              {scannerState === 'scanning' && (
+                <div className="mb-3">
+                  <QRScanner
+                    onScan={handleScannerScan}
+                    onError={handleScannerError}
+                    isActive={true}
+                  />
+                  <p className="text-sm text-gray-500 text-center mt-2">Align QR inside frame</p>
+                </div>
+              )}
+
+              {/* Processing State */}
+              {scannerState === 'processing' && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Processing...</p>
+                </div>
+              )}
+
+              {/* Result State */}
+              {scannerState === 'result' && scanResult && (
+                <div className={`p-4 rounded-md border ${getScanResultColor(scanResult.result)}`}>
+                  {scanResult.result === 'SUCCESS' && (
+                    <>
+                      <p className="font-medium">✓ Check-in successful</p>
+                      {scanResult.checkin && (
+                        <div className="mt-2 text-sm space-y-1">
+                          <p><span className="font-medium">Attendee Code:</span> {scanResult.checkin.attendeeCode}</p>
+                          <p><span className="font-medium">Checked In At:</span> {new Date(scanResult.checkin.checkedInAt).toLocaleString()}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {scanResult.result === 'DUPLICATE' && (
+                    <p className="font-medium">Already checked in</p>
+                  )}
+                  {scanResult.result === 'UNKNOWN_ATTENDEE' && (
+                    <p className="font-medium">Unknown attendee code</p>
+                  )}
+                  {scanResult.result === 'SERVER_ERROR' && (
+                    <p className="font-medium">Check-in service temporarily unavailable</p>
+                  )}
+
+                  <button
+                    onClick={handleScanNext}
+                    className="mt-4 w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  >
+                    Scan Next
+                  </button>
+                </div>
+              )}
+
+              {/* Scanner Error */}
+              {scannerError && (
+                <div className="p-4 rounded-md border text-red-700 bg-red-50 border-red-200">
+                  <p className="font-medium">{scannerError}</p>
+                  <button
+                    onClick={handleOpenScanner}
+                    className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Divider */}
+          <div className="flex items-center my-4">
+            <div className="flex-1 border-t border-gray-200"></div>
+            <span className="px-3 text-gray-500 text-sm">or</span>
+            <div className="flex-1 border-t border-gray-200"></div>
+          </div>
+
+          {/* Manual Check-in Form */}
+          <p className="text-sm text-gray-500 mb-2">Enter attendee code manually</p>
           <form onSubmit={handleCheckin} className="space-y-4">
             <div>
               <label htmlFor="attendeeCode" className="block text-sm font-medium text-gray-700 mb-1">
@@ -304,7 +481,7 @@ export default function OrganizerHome() {
             </button>
           </form>
 
-          {/* Result Display */}
+          {/* Manual Check-in Result */}
           {message && status !== 'idle' && (
             <div className={`mt-4 p-4 rounded-md border ${getStatusColor()}`}>
               <p className="font-medium">{message}</p>
