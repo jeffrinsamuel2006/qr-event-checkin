@@ -4,7 +4,7 @@ import { useAuth } from '../auth';
 import { supabase } from '../config';
 import QRScanner from '../components/QRScanner';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 interface DashboardEvent {
   id: string;
@@ -80,7 +80,7 @@ export default function OrganizerHome() {
     setDashboardLoading(true);
     setDashboardError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/organizer/dashboard`, {
+      const response = await fetch(`${API_BASE_URL}/api/organizer/dashboard`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -161,7 +161,7 @@ export default function OrganizerHome() {
 
   // Submit check-in (used by both manual and scanner)
   const submitCheckin = async (code: string): Promise<CheckinResponse> => {
-    const response = await fetch(`${API_BASE_URL}/checkin`, {
+    const response = await fetch(`${API_BASE_URL}/api/checkin`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

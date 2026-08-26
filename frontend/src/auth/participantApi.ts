@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 export interface ParticipantUser {
   id: string;
@@ -34,7 +34,7 @@ export interface ParticipantError {
 }
 
 export async function getParticipantMe(token: string): Promise<ParticipantResponse> {
-  const response = await fetch(`${API_BASE_URL}/participant/me`, {
+  const response = await fetch(`${API_BASE_URL}/api/participant/me`, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${token}`,

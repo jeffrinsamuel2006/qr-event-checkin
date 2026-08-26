@@ -1,12 +1,12 @@
 import type { LoginResponse, LoginError } from './types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 export async function loginApi(
   email: string,
   password: string
 ): Promise<LoginResponse> {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
