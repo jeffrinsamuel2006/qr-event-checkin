@@ -13,17 +13,17 @@ DELETE FROM users;
 -- ORGANIZER (1)
 -- ==================================================
 INSERT INTO users (id, name, email, password_hash, role) VALUES
-('a0000000-0000-0000-0000-000000000001', 'Demo Organizer', 'organizer@demo.com', '$2b$10$dummyhashforphase1demonstration000', 'ORGANIZER');
+('a0000000-0000-0000-0000-000000000001', 'Demo Organizer', 'organizer@demo.com', '$2b$10$XwFg4mzM3GcAp0mIadDC3eyMm6C90dJjDPrNFWi6IJpJwLfJqP4Yq', 'ORGANIZER');
 
 -- ==================================================
 -- PARTICIPANTS (5)
 -- ==================================================
 INSERT INTO users (id, name, email, password_hash, role) VALUES
-('b0000000-0000-0000-0000-000000000001', 'Alice Participant', 'alice@demo.com', '$2b$10$dummyhashforphase1demonstration001', 'PARTICIPANT'),
-('b0000000-0000-0000-0000-000000000002', 'Bob Participant', 'bob@demo.com', '$2b$10$dummyhashforphase1demonstration002', 'PARTICIPANT'),
-('b0000000-0000-0000-0000-000000000003', 'Charlie Participant', 'charlie@demo.com', '$2b$10$dummyhashforphase1demonstration003', 'PARTICIPANT'),
-('b0000000-0000-0000-0000-000000000004', 'Diana Participant', 'diana@demo.com', '$2b$10$dummyhashforphase1demonstration004', 'PARTICIPANT'),
-('b0000000-0000-0000-0000-000000000005', 'Eve Participant', 'eve@demo.com', '$2b$10$dummyhashforphase1demonstration005', 'PARTICIPANT');
+('b0000000-0000-0000-0000-000000000001', 'Alice Participant', 'alice@demo.com', '$2b$10$.0AvoVOKIaKDgKUQ9TuBl.aSJFSWu5liT8GJZtaPmZu2AzI1k8fDK', 'PARTICIPANT'),
+('b0000000-0000-0000-0000-000000000002', 'Bob Participant', 'bob@demo.com', '$2b$10$.0AvoVOKIaKDgKUQ9TuBl.aSJFSWu5liT8GJZtaPmZu2AzI1k8fDK', 'PARTICIPANT'),
+('b0000000-0000-0000-0000-000000000003', 'Charlie Participant', 'charlie@demo.com', '$2b$10$.0AvoVOKIaKDgKUQ9TuBl.aSJFSWu5liT8GJZtaPmZu2AzI1k8fDK', 'PARTICIPANT'),
+('b0000000-0000-0000-0000-000000000004', 'Diana Participant', 'diana@demo.com', '$2b$10$.0AvoVOKIaKDgKUQ9TuBl.aSJFSWu5liT8GJZtaPmZu2AzI1k8fDK', 'PARTICIPANT'),
+('b0000000-0000-0000-0000-000000000005', 'Eve Participant', 'eve@demo.com', '$2b$10$.0AvoVOKIaKDgKUQ9TuBl.aSJFSWu5liT8GJZtaPmZu2AzI1k8fDK', 'PARTICIPANT');
 
 -- ==================================================
 -- ACTIVE EVENT (1)
